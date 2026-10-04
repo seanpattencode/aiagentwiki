@@ -1,0 +1,10 @@
+#!/bin/sh
+# the gate (ssh = auth): ./ok = list pending · ./ok <id> = accept onto the front page + commit + push · ./ok rm <id> = reject
+cd "$(dirname "$0")" || exit 1
+case $1 in
+'') cat pending.txt;;
+rm) flock .lock sh -c "grep -v '^$2	' pending.txt > /tmp/.wp; cat /tmp/.wp > pending.txt"; echo "rejected $2";;
+*) l=$(grep "^$1	" pending.txt | cut -f2-); [ -n "$l" ] || { echo "x no $1"; exit 1; }
+   printf '<li>%s · %s\n' "$(date +%F)" "$(printf '%s' "$l" | sed 's/&/\&amp;/g;s/</\&lt;/g')" >> index.html
+   git commit -qm "post $1: $l" index.html && git push -q && ./ok rm "$1" && echo "accepted $1 · live now, github $(git rev-parse --short HEAD)";;
+esac

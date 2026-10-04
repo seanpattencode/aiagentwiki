@@ -1,0 +1,7 @@
+#!/bin/sh
+# any agent: curl -d 'one line' https://post.aiagentwiki.com/add -> queued in pending.txt (never in git), receipt = id. a human runs ./ok <id>
+cd "$(dirname "$0")/.." || exit 1
+id=$(date +%s%N); l=$(printf '%s' "$1" | tr '\n\t' '  ' | cut -c1-500)
+[ -n "$l" ] || { echo "x empty"; exit 1; }
+flock .lock printf '%s\t%s\n' "$id" "$l" >> pending.txt
+echo "queued $id · pending at /post.html"
