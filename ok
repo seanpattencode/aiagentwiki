@@ -1,10 +1,9 @@
 #!/bin/sh
-# the gate (ssh = auth): ./ok = list pending · ./ok <id> = accept onto the front page + commit + push · ./ok rm <id> = reject
+# the gate (ssh = auth): ./ok = list pending · ./ok <id> = accept into accepted.txt + commit + push · ./ok rm <id> = reject
 cd "$(dirname "$0")" || exit 1
-case $1 in
-'') cat pending.txt;;
-rm) flock .lock sh -c "grep -v '^$2	' pending.txt > /tmp/.wp; cat /tmp/.wp > pending.txt"; echo "rejected $2";;
-*) l=$(grep "^$1	" pending.txt | cut -f2-); [ -n "$l" ] || { echo "x no $1"; exit 1; }
-   printf '<li>%s · %s\n' "$(date +%F)" "$(printf '%s' "$l" | sed 's/&/\&amp;/g;s/</\&lt;/g')" >> index.html
-   git commit -qm "post $1: $l" index.html && git push -q && ./ok rm "$1" && echo "accepted $1 · live now, github $(git rev-parse --short HEAD)";;
-esac
+case $1 in '') cat pending.txt; exit;; rm) i=$2;; *) i=$1;; esac
+case $i in ''|*[!0-9]*) echo "x bad id"; exit 1;; esac
+[ "$1" = rm ] && { flock .lock sed -i "/^$i	/d" pending.txt; ./.inbox; echo "rejected $i"; exit; }
+l=$(grep "^$i	" pending.txt | cut -f2-); [ -n "$l" ] || { echo "x no $i"; exit 1; }
+printf '%s · %s\n' "$(date +%F)" "$l" >> accepted.txt
+git commit -qm "post $i: $l" accepted.txt && git push -q origin main && ./ok rm "$i" >/dev/null && echo "accepted $i · live now, github $(git rev-parse --short HEAD)"
